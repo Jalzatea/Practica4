@@ -7,9 +7,13 @@
  Grupo / Período: 2204
  Actividad: Fase 4 - Componente práctico - Prácticas simuladas
  Ejercicio: Sistema Integral de Gestión de Clientes, Servicios y Reservas (Software FJ)
- Estudiante: Juan de la Cruz Durango Uribe y Equipo Colaborativo
+ Estudiante: Juan de la Cruz Durango Uribe y Jakeline Alzate Gómez
 =============================================================================
 """
+
+# ==========================================================
+# IMPORTACIÓN DE LIBRERÍAS
+# ==========================================================
 
 import logging
 import re
@@ -17,7 +21,12 @@ from abc import ABC, abstractmethod
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 
-# Configuración del sistema de Logs 
+# ==========================================================
+# CONFIGURACIÓN DEL SISTEMA DE REGISTRO DE EVENTOS (LOGS)
+# ==========================================================
+
+# Se configura un archivo para almacenar los eventos y errores que ocurran durante la ejecución del programa.
+
 logging.basicConfig(
     filename='app_errors.log',
     level=logging.INFO,
@@ -27,99 +36,152 @@ logging.basicConfig(
 # ==========================================
 # 1. EXCEPCIONES PERSONALIZADAS Y ENCADENAMIENTO
 # ==========================================
+
+# Clase base para centralizar las excepciones propias del sistema.
+# HERENCIA: hereda de Exception, que es la clase general de errores
+
 class SoftwareFJException(Exception):
     """Excepción base para el sistema de Software FJ."""
     pass
 
+# HERENCIA: cada excepción especializada hereda de SoftwareFJException.
+# Esto permite identificar y controlar diferentes tipos de errores
+# relacionados con los clientes, servicios y reservas.
+
 class ErrorClienteInvalido(SoftwareFJException):
+    """Se utiliza cuando los datos de un cliente no son válidos."""
     pass
 
 class ErrorServicioInvalido(SoftwareFJException):
+    """Se utiliza cuando los datos o parámetros de un servicio son incorrectos."""
     pass
 
 class ErrorReservaInvalido(SoftwareFJException):
+    """Se utiliza cuando ocurre un problema durante la gestión de una reserva."""
     pass
 
 # ==========================================
 # 2. CLASES ABSTRACTAS Y ENTIDADES
 # ==========================================
+
+# ABSTRACCIÓN:
+# EntidadBase define las características y comportamientos generales que deben compartir las entidades principales del sistema.
+# Al ser una clase abstracta, no está diseñada para crear objetos directamente, sino para servir como base de otras clases.
+
 class EntidadBase(ABC):
     def __init__(self, identificador: str):
+        # Se almacena el identificador de la entidad.
+        # El guion bajo indica que es un atributo protegido por convención.
         self._identificador = identificador
 
+    # ENCAPSULAMIENTO:
+    # La propiedad permite consultar el identificador mediante un método de acceso, sin tener que acceder directamente al atributo interno.
     @property
     def identificador(self):
         return self._identificador
 
+    # ABSTRACCIÓN:
+    # Este método abstracto establece que las clases derivadas deben implementar su propia forma de mostrar la información.
     @abstractmethod
     def obtener_detalle(self) -> str:
         pass
 
+# HERENCIA:
+# Cliente hereda de EntidadBase y reutiliza su identificador y la estructura general definida para las entidades del sistema.
 
 class Cliente(EntidadBase):
     def __init__(self, identificador: str, nombre: str, email: str, telefono: str):
+        # Se llama al constructor de la clase padre para inicializar el identificador heredado.
         super().__init__(identificador)
+
+        # Se asignan los datos mediante propiedades. Esto permite que las validaciones se ejecuten automáticamente.
         self.nombre = nombre
         self.email = email
         self.telefono = telefono
 
+    # ENCAPSULAMIENTO:
+    # @property permite consultar el nombre sin acceder directamente al atributo privado __nombre.
     @property
     def nombre(self):
         return self.__nombre
 
+    # El setter controla la modificación del nombre y evita almacenar valores vacíos o nombres con menos de tres caracteres.
     @nombre.setter
     def nombre(self, valor):
         if not valor or len(valor.strip()) < 3:
             raise ErrorClienteInvalido("Client name is invalid (minimum 3 characters required).")
         self.__nombre = valor.strip()
 
+    # ENCAPSULAMIENTO:
+    # Se define una propiedad para consultar el correo electrónico.
     @property
     def email(self):
         return self.__email
 
+    # Se valida el formato del correo antes de almacenarlo.
     @email.setter
     def email(self, valor):
-        # Validación fortalecida de correo usando expresiones regulares (Regex)
         patron_email = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+     
         if not re.match(patron_email, valor):
             raise ErrorClienteInvalido("Email address format is strictly invalid.")
         self.__email = valor.strip()
 
+    # ENCAPSULAMIENTO:
+    # Propiedad para consultar el número telefónico.
     @property
     def telefono(self):
         return self.__telefono
 
+    # Se verifica que el teléfono contenga únicamente números y tenga una longitud entre 7 y 15 dígitos.
     @telefono.setter
     def telefono(self, valor):
-        # Validación fortalecida de teléfono (exactamente entre 7 y 15 dígitos numéricos)
         if not valor.isdigit() or not (7 <= len(valor) <= 15):
             raise ErrorClienteInvalido("Phone number must contain only digits (7 to 15 characters).")
         self.__telefono = valor.strip()
 
+    # POLIMORFISMO:
+    # Se implementa el método abstracto heredado de EntidadBase. Esta versión muestra la información específica de un cliente.
     def obtener_detalle(self) -> str:
         return f"Customer [ID: {self._identificador}, Name: {self.__nombre}, Email: {self.__email}]"
 
+# ==========================================================
+# CLASE ABSTRACTA SERVICIO                         
+# ==========================================================
 
+# ABSTRACCIÓN Y HERENCIA MÚLTIPLE:
+# Servicio hereda de EntidadBase y ABC.
+# Define las características comunes de los servicios del sistema y establece los métodos que deben implementar sus clases derivadas.
 class Servicio(EntidadBase, ABC):
     def __init__(self, identificador: str, descripcion: str, costo_base: float):
+
+        # HERENCIA:
+        # Se utiliza super() para inicializar el identificador heredado de EntidadBase.
         super().__init__(identificador)
         self.descripcion = descripcion
         self.costo_base = costo_base
 
+    # ENCAPSULAMIENTO:
+    # La propiedad permite consultar el costo base sin acceder directamente al atributo interno __costo_base.
     @property
     def costo_base(self):
         return self.__costo_base
 
+    # Se valida que el costo base sea numérico y positivo antes de almacenarlo.
     @costo_base.setter
     def costo_base(self, valor):
         if not isinstance(valor, (int, float)) or valor <= 0:
             raise ErrorServicioInvalido("Base cost must be a positive number greater than zero.")
         self.__costo_base = float(valor)
 
+    # ABSTRACCIÓN:
+    # Este método obliga a las clases derivadas a implementar su propia fórmula para calcular el costo del servicio.
     @abstractmethod
     def calcular_costo(self) -> float:
         pass
 
+    # ABSTRACCIÓN:
+    # Cada tipo de servicio debe definir las validaciones específicas que necesita para funcionar correctamente.
     @abstractmethod
     def validar_parametros(self) -> bool:
         pass
@@ -128,57 +190,91 @@ class Servicio(EntidadBase, ABC):
 # ==========================================
 # 3. SERVICIOS ESPECIALIZADOS (Polimorfismo)
 # ==========================================
+
+# HERENCIA:
+# ReservaSala hereda los atributos y métodos de Servicio.
+# Representa el servicio de reserva de salas de reuniones.
 class ReservaSala(Servicio):
     def __init__(self, identificador: str, descripcion: str, costo_base: float, capacidad: int):
+     
+        # Se inicializan los atributos heredados de Servicio.
         super().__init__(identificador, descripcion, costo_base)
+        # Atributo propio de las reservas de salas.
         self.capacidad = capacidad
 
+    # VALIDACIÓN:
+    # Comprueba que la capacidad de la sala sea mayor que cero.
     def validar_parametros(self) -> bool:
         if self.capacidad <= 0:
             raise ErrorServicioInvalido("Room capacity must be greater than zero.")
         return True
 
+    # POLIMORFISMO:
+    # Se implementa calcular_costo() con una fórmula propia para las reservas de salas, aplicando descuento e impuesto.
     def calcular_costo(self, descuento: float = 0.0, impuesto: float = 1.19) -> float:
         self.validar_parametros()
         costo_con_descuento = self.costo_base * (1 - descuento)
         return round(costo_con_descuento * impuesto, 2)
 
+    # POLIMORFISMO:
+    # Implementa obtener_detalle() mostrando información específica de una reserva de sala.
     def obtener_detalle(self) -> str:
         return f"Room Reservation: {self.descripcion} (Capacity: {self.capacidad} people)"
 
-
+# HERENCIA: 
+# AlquilerEquipo hereda de Servicio y representa el alquiler de equipos tecnológicos por una cantidad determinada de días.
 class AlquilerEquipo(Servicio):
     def __init__(self, identificador: str, descripcion: str, costo_base: float, dias: int):
+
+        # Se inicializan los atributos heredados.
         super().__init__(identificador, descripcion, costo_base)
+        # Atributo propio que indica la duración del alquiler.
         self.dias = dias
 
+    # VALIDACIÓN:
+    # Comprueba que la cantidad de días de alquiler sea positiva.
     def validar_parametros(self) -> bool:
         if self.dias <= 0:
             raise ErrorServicioInvalido("Rental days must be greater than zero.")
         return True
 
+    # POLIMORFISMO:
+    # Implementa el cálculo del costo para el alquiler de equipos.
+    # Multiplica el costo diario por los días de alquiler y suma el valor adicional del seguro, si se proporciona.
     def calcular_costo(self, seguro: float = 0.0) -> float:
         self.validar_parametros()
         return round((self.costo_base * self.dias) + seguro, 2)
 
+    # POLIMORFISMO:
+    # Muestra los detalles particulares del alquiler de equipos.
     def obtener_detalle(self) -> str:
         return f"Equipment Rental: {self.descripcion} (Days: {self.dias})"
 
-
+# HERENCIA: 
+# AsesoriaEspecializada hereda de Servicio y representa los servicios de asesoría técnica especializada.
 class AsesoriaEspecializada(Servicio):
     def __init__(self, identificador: str, descripcion: str, costo_base: float, horas: int):
+
+        # Se inicializan los atributos heredados.
         super().__init__(identificador, descripcion, costo_base)
+        # Atributo propio que indica la duración de la asesoría.
         self.horas = horas
 
+    # VALIDACIÓN:
+    # Comprueba que la cantidad de horas de asesoría sea positiva.
     def validar_parametros(self) -> bool:
         if self.horas <= 0:
             raise ErrorServicioInvalido("Consulting hours must be greater than zero.")
         return True
 
+    # POLIMORFISMO:
+    # Implementa una fórmula propia para calcular el costo de la asesoría, según las horas contratadas y el bono especial.
     def calcular_costo(self, bono_especial: float = 0.0) -> float:
         self.validar_parametros()
         return round((self.costo_base * self.horas) + bono_especial, 2)
 
+    # POLIMORFISMO:
+    # Muestra la información específica de una asesoría especializada.
     def obtener_detalle(self) -> str:
         return f"Specialized Consulting: {self.descripcion} (Hours: {self.horas})"
 
@@ -187,44 +283,79 @@ class AsesoriaEspecializada(Servicio):
 # 4. CLASE RESERVA Y GESTIÓN DE EXCEPCIONES
 # ==========================================
 class Reserva:
+    # ABSTRACCIÓN:
+    # Esta clase representa una reserva del sistema y reúne la información y las operaciones necesarias para gestionarla.
+ 
     def __init__(self, id_reserva: str, cliente: Cliente, servicio: Servicio):
         self.id_reserva = id_reserva
         self.cliente = cliente
         self.servicio = servicio
         self.estado = "Pending"
 
+    # ASOCIACIÓN ENTRE OBJETOS:
+    # La reserva se relaciona con objetos de las clases Cliente y Servicio, permitiendo acceder a su información.
     def confirmar(self) -> str:
+        # MÉTODO PARA CONFIRMAR UNA RESERVA.
         try:
             if self.estado == "Confirmed":
+               # Se genera una excepción personalizada si la reserva ya había sido confirmada anteriormente.
                 raise ErrorReservaInvalido("Reservation has already been confirmed previously.")
             self.estado = "Confirmed"
+
+            # LOGGING:
+            # Registra que la operación se realizó correctamente.
             logging.info(f"Reservation {self.id_reserva} confirmed successfully.")
             return f"[SUCCESS] Reservation {self.id_reserva} confirmed for {self.cliente.nombre}."
         except ErrorReservaInvalido as e:
+
+            # LOGGING:
+            # Registra el error ocurrido durante la confirmación.
             logging.error(f"Error confirming reservation {self.id_reserva}: {e}")
-            # Encadenamiento de excepciones exigido por la guía con 'raise ... from ...'
+         
+            # ENCADENAMIENTO DE EXCEPCIONES:
+            # 'raise ... from e' genera una nueva excepción y conserva la excepción original como causa del problema.
             raise ErrorReservaInvalido(f"Failed to confirm reservation {self.id_reserva}") from e
 
     def cancelar(self) -> str:
+        # MÉTODO PARA CANCELAR UNA RESERVA.
         try:
             if self.estado == "Cancelled":
+                # Evita cancelar una reserva que ya está cancelada.
                 raise ErrorReservaInvalido("Reservation is already cancelled.")
+             
             self.estado = "Cancelled"
+         
+            # LOGGING: registra la cancelación exitosa.
             logging.info(f"Reservation {self.id_reserva} cancelled successfully.")
             return f"[INFO] Reservation {self.id_reserva} has been cancelled."
+         
         except Exception as e:
+
+            # Captura y registra cualquier excepción que ocurra durante el proceso de cancelación.
             logging.error(f"Critical error cancelling reservation {self.id_reserva}: {e}")
+
+            # ENCADENAMIENTO DE EXCEPCIONES:
+            # Conserva el error original como causa de la nueva excepción.
             raise ErrorReservaInvalido(f"Critical cancellation failure for ID {self.id_reserva}") from e
 
     def procesar(self) -> str:
+        # MÉTODO PARA PROCESAR UNA RESERVA.
         try:
             if self.estado != "Confirmed":
+                # Solo se permite procesar reservas confirmadas.
                 raise ErrorReservaInvalido("Only confirmed reservations can be processed.")
             self.estado = "Processed"
+
+            # LOGGING: registra que la reserva fue procesada.
             logging.info(f"Reservation {self.id_reserva} processed successfully.")
             return f"[PROCESS] Reservation {self.id_reserva} is now fully processed."
+         
         except Exception as e:
+            # Registra cualquier error ocurrido durante el procesamiento.
             logging.error(f"Error processing reservation {self.id_reserva}: {e}")
+
+            # ENCADENAMIENTO DE EXCEPCIONES:
+            # Permite conocer el error original que provocó el fallo.
             raise ErrorReservaInvalido(f"Processing error on reservation {self.id_reserva}") from e
 
 
@@ -232,7 +363,13 @@ class Reserva:
 # 5. INTERFAZ GRÁFICA DE USUARIO (TKINTER)
 # ==========================================
 class AppSoftwareFJ:
+
+    # ABSTRACCIÓN Y ENCAPSULAMIENTO:
+    # Esta clase reúne los elementos de la interfaz gráfica y las operaciones que permiten interactuar con el sistema.
+    # Oculta los detalles de construcción de las ventanas mediante métodos específicos para cada sección de la aplicación.
+ 
     def __init__(self, root):
+        # Configuración inicial de la ventana principal.
         self.root = root
         self.root.title("Software FJ - Integrated Management System (UNAD Phase 4)")
         self.root.geometry("820x620")
@@ -253,6 +390,8 @@ class AppSoftwareFJ:
         self.crear_pestana_interactiva()
 
     def crear_pestana_simulacion(self):
+        # INTERFAZ GRÁFICA:
+        # Construye la pestaña donde el usuario puede ejecutar las diez operaciones de prueba del sistema.
         titulo = tk.Label(self.frame_simulacion, text="Automated 10-Operation Simulation (Software FJ)", font=("Arial", 12, "bold"), fg="#003865")
         titulo.pack(pady=10)
 
@@ -263,6 +402,8 @@ class AppSoftwareFJ:
         self.texto_consola.pack(padx=10, pady=10, fill="both", expand=True)
 
     def ejecutar_simulacion_gui(self):
+        # SIMULACIÓN AUTOMÁTICA:
+        # Ejecuta diez operaciones que permiten comprobar el funcionamiento de las clases, las validaciones y las excepciones personalizadas del sistema.
         self.texto_consola.delete(1.0, tk.END)
         self.texto_consola.insert(tk.END, "=== STARTING 10-OPERATION SIMULATION ===\n\n")
         
@@ -275,7 +416,14 @@ class AppSoftwareFJ:
                     s1 = ReservaSala("S001", "North Executive Room", 150000.0, 10)
                     res1 = Reserva("R001", c1, s1)
                     msg = res1.confirmar()
-                    self.texto_consola.insert(tk.END, f"{msg}\nTotal cost with taxes: ${s1.calcular_costo(descuento=0.1)}\n")
+                    self.texto_consola.insert(tk.END, f"{msg}\n")
+                    
+                    # Se procesa la reserva después de confirmar su estado.
+                    # Esto permite comprobar que el método procesar() funciona correctamente cuando la reserva está confirmada.
+                    msg_proceso = res1.procesar()
+                    self.texto_consola.insert(tk.END, f"{msg_proceso}\n")
+                    
+                    self.texto_consola.insert(tk.END, f"Total cost with taxes: ${s1.calcular_costo(descuento=0.1)}\n")
 
                 elif i == 2:
                     self.texto_consola.insert(tk.END, "Attempting to register customer with invalid email...\n")
@@ -329,8 +477,16 @@ class AppSoftwareFJ:
                     Cliente("C008", "Al", "al@email.com", "3189990000")
 
             except (SoftwareFJException, ValueError, TypeError) as ex:
+                # REGISTRO DE ERRORES:
+                # Guarda el tipo de excepción y el mensaje generado durante la operación que presentó el problema.
                 logging.warning(f"Exception caught in operation #{i}: {type(ex).__name__} - {ex}")
+            
                 self.texto_consola.insert(tk.END, f"[CONTROLLED EXCEPTION CAUGHT] Failed safely -> {ex}\n")
+            
+                # ENCADENAMIENTO DE EXCEPCIONES:
+                # __cause__ permite consultar la excepción original cuando se ha utilizado la instrucción raise ... from ...
+                if ex.__cause__ is not None:
+                    self.texto_consola.insert(tk.END, f"[ORIGINAL CAUSE] {type(ex.__cause__).__name__}: {ex.__cause__}\n")
             else:
                 self.texto_consola.insert(tk.END, f"[STATUS] Operation #{i} completed successfully.\n")
             finally:
@@ -339,6 +495,8 @@ class AppSoftwareFJ:
         self.texto_consola.insert(tk.END, "=== SIMULATION COMPLETED. CHECK 'app_errors.log' ===\n")
 
     def crear_pestana_interactiva(self):
+        # INTERFAZ INTERACTIVA:
+        # Construye un formulario para ingresar los datos de un cliente y comprobar sus validaciones desde la interfaz.
         lbl_info = tk.Label(self.frame_interactivo, text="Customer Data Validation Test", font=("Arial", 12, "bold"), fg="#003865")
         lbl_info.pack(pady=15)
 
@@ -365,6 +523,8 @@ class AppSoftwareFJ:
         btn_validar.pack(pady=20)
 
     def validar_cliente_interactivo(self):
+        # VALIDACIÓN Y MANEJO DE EXCEPCIONES:
+        # Obtiene los datos ingresados por el usuario e intenta crear un objeto Cliente. Si los datos no cumplen las condiciones establecidas, muestra el error correspondiente.
         try:
             cli = Cliente(
                 self.ent_id.get(),
@@ -383,4 +543,18 @@ class AppSoftwareFJ:
 if __name__ == "__main__":
     root = tk.Tk()
     app = AppSoftwareFJ(root)
+    root.mainloop()
+
+# ==========================================
+# 6. PUNTO DE ENTRADA DEL PROGRAMA
+# ==========================================
+
+if __name__ == "__main__":
+    # Crea la ventana principal de Tkinter.
+    root = tk.Tk()
+
+    # Instancia la aplicación y construye sus componentes gráficos.
+    app = AppSoftwareFJ(root)
+
+    # Mantiene activa la interfaz y espera las acciones del usuario.
     root.mainloop()
